@@ -31,7 +31,7 @@ const QUICK_ACTIONS = [
     icon: BookOpen,
     bg: '#E8E8E8',
     iconColor: '#0D0D0D',
-    route: '/bible-theme/index',
+    route: '/lesson',
   },
   {
     key: 'schedule',

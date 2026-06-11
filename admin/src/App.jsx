@@ -4,7 +4,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebas
 import { doc, getDoc } from 'firebase/firestore';
 import {
   LayoutDashboard, Image, Newspaper, BookOpen, Users, Calendar,
-  Key, CheckSquare, Sparkles, ClipboardList, UserCog,
+  Key, CheckSquare, Sparkles, ClipboardList, UserCog, Video,
   LogOut, ChevronRight, Mail, Lock, Eye, EyeOff, ArrowRight,
 } from 'lucide-react';
 import { auth, db } from './firebase';
@@ -21,6 +21,7 @@ import AttendancePage from './pages/Attendance';
 import StreamModerationPage from './pages/StreamModeration';
 import JoinRequestsPage from './pages/JoinRequests';
 import UsersPage from './pages/Users';
+import LessonsPage from './pages/Lessons';
 
 // ── Design Tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -245,6 +246,7 @@ const NAV_ITEMS = [
     items: [
       { path: '/banners',      label: 'Banners',      icon: Image },
       { path: '/news',         label: 'News',         icon: Newspaper },
+      { path: '/lessons',      label: 'Lessons',      icon: Video },
       { path: '/bible-themes', label: 'Bible Themes', icon: BookOpen },
       { path: '/schedules',    label: 'Schedules',    icon: Calendar },
     ],
@@ -520,6 +522,7 @@ export default function App() {
               <Route path="/"              element={<DashboardPage />} />
               <Route path="/banners"       element={<BannersPage />} />
               <Route path="/news"          element={<NewsPage />} />
+              <Route path="/lessons"        element={<LessonsPage />} />
               <Route path="/bible-themes"  element={<BibleThemesPage />} />
               <Route path="/groups"        element={<GroupsPage />} />
               <Route path="/schedules"     element={<SchedulesPage />} />
