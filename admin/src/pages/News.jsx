@@ -29,10 +29,11 @@ export default function NewsPage() {
     if (!form.title.trim()) { alert('Title is required.'); return; }
     setSaving(true);
     try {
+      const { id: _id, ...fields } = form;
       if (editing) {
-        await updateDoc(doc(db, 'news', editing), { ...form, updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, 'news', editing), { ...fields, updatedAt: serverTimestamp() });
       } else {
-        await addDoc(collection(db, 'news'), { ...form, createdAt: serverTimestamp() });
+        await addDoc(collection(db, 'news'), { ...fields, createdAt: serverTimestamp() });
       }
       setShowModal(false);
       await load();

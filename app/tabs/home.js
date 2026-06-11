@@ -47,7 +47,7 @@ const QUICK_ACTIONS = [
     icon: BookMarked,
     bg: '#E8E8E8',
     iconColor: '#0D0D0D',
-    route: '/bible-theme/index',
+    route: '/bible',
   },
   {
     key: 'quiettime',
@@ -183,7 +183,7 @@ export default function HomeScreen() {
         {/* ── BIBLE THEME THIS MONTH ─────────────────────────────────── */}
         {bibleTheme && (
           <View style={styles.section}>
-            <SectionHeader title="Theme This Month" onMore={() => router.push('/bible-theme/index')} />
+            <SectionHeader title="Theme This Month" onMore={() => router.push('/bible-theme')} />
             <BibleThemeCard theme={bibleTheme} />
           </View>
         )}

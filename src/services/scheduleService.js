@@ -25,7 +25,7 @@ export async function getSchedules(groupId = null) {
     );
   }
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function createSchedule(data) {

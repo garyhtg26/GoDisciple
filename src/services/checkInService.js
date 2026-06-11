@@ -53,5 +53,5 @@ export async function getAttendanceByEvent(eventId) {
   const snap = await getDocs(
     query(collection(db, 'attendance'), where('eventId', '==', eventId)),
   );
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }

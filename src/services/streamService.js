@@ -46,7 +46,7 @@ export async function getPosts(filterCategory = null, filterGroupId = null, last
 
   const snap = await getDocs(q);
   return {
-    posts: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    posts: snap.docs.map(d => ({ ...d.data(), id: d.id })),
     lastDoc: snap.docs[snap.docs.length - 1] || null,
   };
 }
@@ -80,7 +80,7 @@ export async function getComments(postId) {
       orderBy('createdAt', 'asc'),
     ),
   );
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function addComment(postId, data) {

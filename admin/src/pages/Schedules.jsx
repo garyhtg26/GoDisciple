@@ -36,8 +36,9 @@ export default function SchedulesPage() {
     if (!form.startDateTime) { alert('Start date is required.'); return; }
     setSaving(true);
     try {
+      const { id: _id, ...fields } = form;
       const data = {
-        ...form,
+        ...fields,
         startDateTime: Timestamp.fromDate(new Date(form.startDateTime)),
         endDateTime: form.endDateTime ? Timestamp.fromDate(new Date(form.endDateTime)) : null,
       };

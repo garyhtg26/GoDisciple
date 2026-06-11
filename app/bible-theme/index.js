@@ -15,7 +15,10 @@ export default function BibleThemeListScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getBibleThemes().then(t => { setThemes(t); setLoading(false); });
+    getBibleThemes()
+      .then(setThemes)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   return (

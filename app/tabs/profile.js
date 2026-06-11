@@ -102,7 +102,7 @@ export default function ProfileScreen() {
         {/* Explore */}
         <Text style={styles.sectionLabel}>EXPLORE</Text>
         <View style={styles.menuGroup}>
-          <MenuItem icon={BookOpen} label="Bible Themes" onPress={() => router.push('/bible-theme/index')} />
+          <MenuItem icon={BookOpen} label="Bible Themes" onPress={() => router.push('/bible-theme')} />
           <MenuItem icon={QrCode} label="Scan QR Check-in" onPress={() => router.push('/checkin/scanner')} last />
         </View>
 

@@ -6,9 +6,17 @@ import Colors from '../constants/colors';
 import Typography from '../constants/typography';
 import Spacing from '../constants/spacing';
 
+function getMonthLabel(startDate) {
+  if (!startDate) return null;
+  const d = startDate.toDate ? startDate.toDate() : new Date(startDate);
+  if (isNaN(d)) return null;
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
 export default function BibleThemeCard({ theme, compact = false }) {
   const router = useRouter();
   if (!theme) return null;
+  const monthLabel = getMonthLabel(theme.startDate);
 
   if (compact) {
     return (
@@ -20,6 +28,7 @@ export default function BibleThemeCard({ theme, compact = false }) {
         <View style={styles.compactIconRow}>
           <BookOpen size={14} color={Colors.primaryLight} />
           <Text style={styles.compactLabel}>Bible Theme</Text>
+          {monthLabel && <Text style={styles.compactMonth}>· {monthLabel}</Text>}
         </View>
         <Text style={styles.compactTitle}>{theme.title}</Text>
         <Text style={styles.compactRef}>{theme.scriptureReference}</Text>
@@ -39,6 +48,7 @@ export default function BibleThemeCard({ theme, compact = false }) {
           <View style={styles.labelRow}>
             <BookOpen size={10} color={Colors.white} strokeWidth={2} />
             <Text style={styles.label}>Bible Theme</Text>
+            {monthLabel && <Text style={styles.month}>· {monthLabel}</Text>}
           </View>
           <Text style={styles.ref} numberOfLines={1}>{theme.scriptureReference}</Text>
         </View>
@@ -89,6 +99,16 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     fontWeight: Typography.medium,
     maxWidth: 140,
+  },
+  month: {
+    fontSize: Typography.xs,
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: Typography.medium,
+  },
+  compactMonth: {
+    fontSize: Typography.xs,
+    color: Colors.textLight,
+    fontWeight: Typography.medium,
   },
   // compact version (used elsewhere)
   compactCard: {

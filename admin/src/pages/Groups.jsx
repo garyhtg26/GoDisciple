@@ -33,11 +33,12 @@ export default function GroupsPage() {
     if (!form.name.trim()) { alert('Group name is required.'); return; }
     setSaving(true);
     try {
+      const { id: _id, ...fields } = form;
       if (editing) {
-        await updateDoc(doc(db, 'groups', editing), { ...form, updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, 'groups', editing), { ...fields, updatedAt: serverTimestamp() });
       } else {
         await addDoc(collection(db, 'groups'), {
-          ...form,
+          ...fields,
           leaderId: null,
           coLeaderIds: [],
           memberIds: [],
