@@ -60,7 +60,7 @@ export default function BibleThemeDetailScreen() {
         <View style={styles.body}>
           {/* Scripture — paper style */}
           <View style={styles.scriptureCard}>
-            <View style={styles.paperLine} />
+            
             <Text style={styles.scriptureRef}>{theme.scriptureReference}</Text>
             {theme.scriptureText ? (
               <Text style={styles.scriptureText}>"{theme.scriptureText}"</Text>
