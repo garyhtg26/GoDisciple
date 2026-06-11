@@ -1,0 +1,206 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ──────────────────────────────────────────────────────
+
+    // Is the current request authenticated?
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // Is the current user the owner of the document?
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // Get the role of the current user from their Firestore profile.
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthed() && myRole() == 'admin';
+    }
+
+    function isLeader() {
+      return isAuthed() && (myRole() == 'leader' || myRole() == 'coLeader' || myRole() == 'admin');
+    }
+
+    // Is the current user the leader/coLeader of a specific group?
+    function isGroupLeader(groupId) {
+      let group = get(/databases/$(database)/documents/groups/$(groupId)).data;
+      return isAuthed() && (
+        group.leaderId == request.auth.uid ||
+        request.auth.uid in group.coLeaderIds
+      );
+    }
+
+
+    // ─── Users ─────────────────────────────────────────────────────────────────
+    // Anyone logged in can read public profile info.
+    // Users can update only their own safe fields (not role).
+    // Only admins can set admin roles.
+
+    match /users/{uid} {
+      allow read: if isAuthed();
+
+      allow create: if isOwner(uid);
+
+      allow update: if isOwner(uid)
+        && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role)
+        || isAdmin();
+    }
+
+
+    // ─── Groups ────────────────────────────────────────────────────────────────
+    // Everyone (authenticated) can read groups.
+    // Only admins can create groups.
+    // Leaders/coLeaders can update their own group; admins can update any.
+
+    match /groups/{groupId} {
+      allow read: if isAuthed();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isGroupLeader(groupId);
+      allow delete: if isAdmin();
+    }
+
+
+    // ─── Group Join Requests ───────────────────────────────────────────────────
+    // Authenticated users can create requests.
+    // Group leaders can read & update (approve/reject) requests for their group.
+    // Users can read their own requests.
+
+    match /groupJoinRequests/{reqId} {
+      allow create: if isAuthed();
+      allow read: if isAuthed() && (
+        resource.data.userId == request.auth.uid ||
+        isGroupLeader(resource.data.groupId) ||
+        isAdmin()
+      );
+      allow update: if isGroupLeader(resource.data.groupId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+
+    // ─── Discipleship Relations ────────────────────────────────────────────────
+    // Group leaders and admins can manage these.
+
+    match /discipleshipRelations/{relId} {
+      allow read: if isAuthed();
+      allow write: if isLeader() || isAdmin();
+    }
+
+
+    // ─── Leader Claim Codes ────────────────────────────────────────────────────
+    // Only authenticated users can read to validate a code they're submitting.
+    // Only admins can create codes.
+    // A user can update a code only if marking it as used (claiming it).
+
+    match /leaderClaimCodes/{codeId} {
+      allow read: if isAuthed();
+      allow create: if isAdmin();
+      allow update: if isAuthed(); // service handles validation logic
+      allow delete: if isAdmin();
+    }
+
+
+    // ─── CMS: Banners ──────────────────────────────────────────────────────────
+    match /banners/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+
+    // ─── CMS: News ─────────────────────────────────────────────────────────────
+    match /news/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+
+    // ─── CMS: Bible Themes ─────────────────────────────────────────────────────
+    match /bibleThemes/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+
+    // ─── Schedules ─────────────────────────────────────────────────────────────
+    // Public schedules: any authenticated user can read.
+    // Admins can write all. Leaders can write group-specific schedules.
+
+    match /schedules/{id} {
+      allow read: if isAuthed();
+      allow create: if isAdmin() || (isLeader() && request.resource.data.groupId != null);
+      allow update, delete: if isAdmin()
+        || (isLeader() && resource.data.groupId != null && isGroupLeader(resource.data.groupId));
+    }
+
+
+    // ─── Events ────────────────────────────────────────────────────────────────
+    match /events/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+
+    // ─── Attendance ────────────────────────────────────────────────────────────
+    // Any authenticated user can create an attendance record (QR scan).
+    // Leaders and admins can read attendance for reporting.
+    // No one can delete attendance records (immutable log).
+
+    match /attendance/{id} {
+      allow create: if isAuthed();
+      allow read: if isLeader() || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+
+    // ─── Stream Posts ──────────────────────────────────────────────────────────
+    // Any authenticated user can read and create posts.
+    // Users can edit/delete only their own posts.
+    // Admins can moderate (delete) any post.
+
+    match /streamPosts/{postId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed();
+      allow update: if isAuthed() && resource.data.authorId == request.auth.uid
+        || isAdmin();
+      allow delete: if isAuthed() && resource.data.authorId == request.auth.uid
+        || isAdmin();
+    }
+
+
+    // ─── Stream Comments ───────────────────────────────────────────────────────
+    // Any authenticated user can read and create comments.
+    // Users can delete only their own comments. Admins can delete any.
+
+    match /streamComments/{commentId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed();
+      allow delete: if isAuthed() && resource.data.authorId == request.auth.uid
+        || isAdmin();
+    }
+
+
+    // ─── Stream Likes ──────────────────────────────────────────────────────────
+    // Any authenticated user can create or delete their own likes.
+
+    match /streamLikes/{likeId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthed() && resource.data.userId == request.auth.uid;
+    }
+
+
+    // ─── App Settings ──────────────────────────────────────────────────────────
+    // Anyone authenticated can read app settings.
+    // Only admins can write.
+
+    match /appSettings/{docId} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+  }
+}

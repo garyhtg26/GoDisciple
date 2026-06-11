@@ -30,7 +30,9 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files — NEVER commit secrets
+.env
+.env.local
 .env*.local
 
 # typescript
@@ -39,3 +41,14 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Admin
+admin/node_modules/
+admin/dist/
+
+# Editor
+.vscode/
+.idea/
+
+# Claude
+.claude/

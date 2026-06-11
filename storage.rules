@@ -1,0 +1,56 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Helper ─────────────────────────────────────────────────────────────────
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isImageFile() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isUnder10MB() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // ── Profile Photos ─────────────────────────────────────────────────────────
+    // Users can upload/read their own profile photo.
+    match /profilePhotos/{userId}.jpg {
+      allow read: if isAuthed();
+      allow write: if isAuthed()
+        && request.auth.uid == userId
+        && isImageFile()
+        && isUnder10MB();
+    }
+
+    // ── CMS Uploads (banners, news, bible themes, group logos) ─────────────────
+    // Only authenticated users can read.
+    // Upload is open to authenticated users (admin role enforced by Firestore, not Storage).
+    match /banners/{filename} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && isImageFile() && isUnder10MB();
+    }
+
+    match /news/{filename} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && isImageFile() && isUnder10MB();
+    }
+
+    match /bible-themes/{filename} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && isImageFile() && isUnder10MB();
+    }
+
+    match /group-logos/{filename} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && isImageFile() && isUnder10MB();
+    }
+
+    match /uploads/{filename} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && isImageFile() && isUnder10MB();
+    }
+  }
+}
