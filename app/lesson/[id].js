@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
 
   scroll: { flex: 1, backgroundColor: Colors.surface },
 
-  heroWrap: { width: '100%', aspectRatio: 16 / 9, backgroundColor: Colors.surfaceAlt },
+  heroWrap: { width: '100%', aspectRatio: 16 / 9, backgroundColor: Colors.surfaceAlt, overflow: 'hidden' },
   heroImg: { width: '100%', height: '100%', resizeMode: 'cover' },
   heroPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   playOverlay: {

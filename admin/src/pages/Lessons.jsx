@@ -65,8 +65,9 @@ export default function LessonsPage() {
     if (!form.title.trim()) { alert('Title is required.'); return; }
     setSaving(true);
     try {
+      const { id: _id, ...fields } = form;
       const payload = {
-        ...form,
+        ...fields,
         date: toTimestamp(form.date),
         updatedAt: serverTimestamp(),
       };

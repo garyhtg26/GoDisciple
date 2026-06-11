@@ -126,6 +126,13 @@ service cloud.firestore {
     }
 
 
+    // ─── CMS: Lessons ──────────────────────────────────────────────────────────
+    match /lessons/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+
     // ─── Schedules ─────────────────────────────────────────────────────────────
     // Public schedules: any authenticated user can read.
     // Admins can write all. Leaders can write group-specific schedules.

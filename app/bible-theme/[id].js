@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ImageBackground, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Radio } from 'lucide-react-native';
@@ -9,7 +9,12 @@ import LoadingState from '../../src/components/LoadingState';
 import Colors from '../../src/constants/colors';
 import Typography from '../../src/constants/typography';
 import Spacing from '../../src/constants/spacing';
-import { formatDate } from '../../src/utils/formatDate';
+function formatThemeDate(value) {
+  if (!value) return '';
+  const d = value.toDate ? value.toDate() : new Date(value);
+  if (isNaN(d)) return String(value);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 
 export default function BibleThemeDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -53,8 +58,9 @@ export default function BibleThemeDetailScreen() {
         </ImageBackground>
 
         <View style={styles.body}>
-          {/* Scripture */}
+          {/* Scripture — paper style */}
           <View style={styles.scriptureCard}>
+            <View style={styles.paperLine} />
             <Text style={styles.scriptureRef}>{theme.scriptureReference}</Text>
             {theme.scriptureText ? (
               <Text style={styles.scriptureText}>"{theme.scriptureText}"</Text>
@@ -74,17 +80,13 @@ export default function BibleThemeDetailScreen() {
             {theme.startDate && (
               <View style={styles.dateChip}>
                 <Text style={styles.dateChipLabel}>Start</Text>
-                <Text style={styles.dateChipValue}>
-                  {typeof theme.startDate === 'string' ? theme.startDate : formatDate(theme.startDate)}
-                </Text>
+                <Text style={styles.dateChipValue}>{formatThemeDate(theme.startDate)}</Text>
               </View>
             )}
             {theme.endDate && (
               <View style={styles.dateChip}>
                 <Text style={styles.dateChipLabel}>End</Text>
-                <Text style={styles.dateChipValue}>
-                  {typeof theme.endDate === 'string' ? theme.endDate : formatDate(theme.endDate)}
-                </Text>
+                <Text style={styles.dateChipValue}>{formatThemeDate(theme.endDate)}</Text>
               </View>
             )}
           </View>
@@ -133,16 +135,35 @@ const styles = StyleSheet.create({
   heroSubtitle: { fontSize: Typography.sm, color: 'rgba(255,255,255,0.85)' },
   body: { padding: Spacing.base },
   scriptureCard: {
-    backgroundColor: Colors.primary, borderRadius: 16,
-    padding: Spacing.xl, marginBottom: Spacing.base,
+    backgroundColor: '#FBF8F1',          // warm paper cream
+    borderRadius: 16,
+    padding: Spacing.xl,
+    marginBottom: Spacing.base,
+    borderWidth: 1,
+    borderColor: '#EAE3D4',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  paperLine: {
+    position: 'absolute',
+    left: Spacing.base,
+    top: Spacing.base,
+    bottom: Spacing.base,
+    width: 2,
+    backgroundColor: '#E3D9C3',          // faded margin line like a journal
+    borderRadius: 1,
   },
   scriptureRef: {
     fontSize: Typography.sm, fontWeight: Typography.bold,
-    color: Colors.primaryLight, letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase',
+    color: '#8A7A56', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase',
   },
   scriptureText: {
-    fontSize: Typography.md, color: Colors.white,
-    fontStyle: 'italic', lineHeight: Typography.md * 1.7,
+    fontSize: Typography.md, color: '#3D362A',
+    fontStyle: 'italic', lineHeight: Typography.md * 1.8,
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
   },
   section: {
     backgroundColor: Colors.surface, borderRadius: 16, padding: Spacing.base, marginBottom: Spacing.base,

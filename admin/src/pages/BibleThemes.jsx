@@ -32,7 +32,9 @@ export default function BibleThemesPage() {
     if (!form.title.trim()) { alert('Title is required.'); return; }
     setSaving(true);
     try {
-      const data = { ...form, updatedAt: serverTimestamp() };
+      // strip the row id so it never gets stored as a document field
+      const { id: _id, ...fields } = form;
+      const data = { ...fields, updatedAt: serverTimestamp() };
       if (editing) {
         await updateDoc(doc(db, 'bibleThemes', editing), data);
       } else {

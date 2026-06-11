@@ -14,13 +14,13 @@ import { db } from '../firebase/config';
 
 export async function getGroups() {
   const snap = await getDocs(collection(db, 'groups'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function getGroup(groupId) {
   const snap = await getDoc(doc(db, 'groups', groupId));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  return { ...snap.data(), id: snap.id };
 }
 
 export async function updateGroup(groupId, updates) {
@@ -61,7 +61,7 @@ export async function getPendingRequests(groupId) {
       orderBy('createdAt', 'asc'),
     ),
   );
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function reviewJoinRequest(requestId, status, reviewedBy) {
@@ -140,5 +140,5 @@ export async function getDiscipleshipRelations(groupId) {
   const snap = await getDocs(
     query(collection(db, 'discipleshipRelations'), where('groupId', '==', groupId)),
   );
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }

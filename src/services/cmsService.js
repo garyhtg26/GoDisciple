@@ -12,14 +12,14 @@ import { db } from '../firebase/config';
 
 export async function getBanners() {
   const snap = await getDocs(query(collection(db, 'banners'), orderBy('order', 'asc')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function getNews(count = 5) {
   const snap = await getDocs(
     query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(count)),
   );
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function getActiveBibleTheme() {
@@ -27,20 +27,24 @@ export async function getActiveBibleTheme() {
     query(collection(db, 'bibleThemes'), where('isActive', '==', true), limit(1)),
   );
   if (snap.empty) return null;
-  return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  return { ...snap.docs[0].data(), id: snap.docs[0].id };
 }
 
 export async function getBibleThemes() {
-  const snap = await getDocs(
-    query(collection(db, 'bibleThemes'), orderBy('startDate', 'desc')),
-  );
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // No orderBy here: Firestore drops documents missing the sort field,
+  // and themes created without a start date would silently disappear.
+  const snap = await getDocs(collection(db, 'bibleThemes'));
+  const themes = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  return themes.sort((a, b) => {
+    if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+    return (b.startDate || '') < (a.startDate || '') ? -1 : 1;
+  });
 }
 
 export async function getBibleTheme(themeId) {
   const snap = await getDoc(doc(db, 'bibleThemes', themeId));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  return { ...snap.data(), id: snap.id };
 }
 
 export async function getAppSettings() {

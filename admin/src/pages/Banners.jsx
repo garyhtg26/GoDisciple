@@ -29,10 +29,11 @@ export default function BannersPage() {
     if (!form.imageURL) { alert('Please upload or provide an image.'); return; }
     setSaving(true);
     try {
+      const { id: _id, ...fields } = form;
       if (editing) {
-        await updateDoc(doc(db, 'banners', editing), form);
+        await updateDoc(doc(db, 'banners', editing), fields);
       } else {
-        await addDoc(collection(db, 'banners'), { ...form, createdAt: serverTimestamp() });
+        await addDoc(collection(db, 'banners'), { ...fields, createdAt: serverTimestamp() });
       }
       setShowModal(false);
       await load();

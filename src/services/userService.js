@@ -25,7 +25,7 @@ export async function createUserProfile(uid, data) {
 export async function getUserProfile(uid) {
   const snap = await getDoc(doc(db, 'users', uid));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  return { ...snap.data(), id: snap.id };
 }
 
 export async function updateUserProfile(uid, updates) {

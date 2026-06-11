@@ -27,13 +27,13 @@ export async function getLessons({ category = null, count = 20 } = {}) {
     );
   }
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function getLesson(lessonId) {
   const snap = await getDoc(doc(db, 'lessons', lessonId));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  return { ...snap.data(), id: snap.id };
 }
 
 export async function getLessonCategories() {
