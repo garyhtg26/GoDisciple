@@ -68,6 +68,23 @@ export async function createPost(data) {
   return ref.id;
 }
 
+export async function getPost(postId) {
+  const snap = await getDoc(doc(db, 'streamPosts', postId));
+  if (!snap.exists()) return null;
+  return { ...snap.data(), id: snap.id };
+}
+
+export async function updatePost(postId, data) {
+  await updateDoc(doc(db, 'streamPosts', postId), {
+    content: data.content,
+    category: data.category,
+    visibility: data.visibility,
+    groupId: data.groupId || null,
+    isEdited: true,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function deletePost(postId) {
   await deleteDoc(doc(db, 'streamPosts', postId));
 }

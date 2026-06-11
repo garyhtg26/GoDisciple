@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Send, BookOpen, HandMetal, Heart, MessageCircle, Globe, Users } from 'lucide-react-native';
 import { useAuthContext } from '../../src/context/AuthContext';
-import { createPost } from '../../src/services/streamService';
+import { createPost, getPost, updatePost } from '../../src/services/streamService';
 import InputField from '../../src/components/InputField';
 import PrimaryButton from '../../src/components/PrimaryButton';
 import Avatar from '../../src/components/Avatar';
@@ -29,29 +29,52 @@ const VISIBILITY = [
 
 export default function CreatePostScreen() {
   const router = useRouter();
+  const { editId } = useLocalSearchParams();
   const { user, profile } = useAuthContext();
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('reflection');
   const [visibility, setVisibility] = useState('public');
   const [posting, setPosting] = useState(false);
 
+  const isEditing = !!editId;
+
+  useEffect(() => {
+    if (!editId) return;
+    getPost(editId).then(post => {
+      if (!post) { Alert.alert('Error', 'Post not found.'); router.back(); return; }
+      if (post.authorId !== user?.uid) { Alert.alert('Error', 'You can only edit your own posts.'); router.back(); return; }
+      setContent(post.content || '');
+      setCategory(post.category || 'general');
+      setVisibility(post.visibility || 'public');
+    });
+  }, [editId]);
+
   async function handlePost() {
     if (!content.trim()) { Alert.alert('Validation', 'Post content cannot be empty.'); return; }
     if (!user) return;
     setPosting(true);
     try {
-      await createPost({
-        authorId: user.uid,
-        authorName: profile?.fullName || user.email,
-        authorPhotoURL: profile?.photoURL || null,
-        content: content.trim(),
-        category,
-        visibility,
-        groupId: visibility === 'group' ? (profile?.groupId || null) : null,
-      });
+      if (isEditing) {
+        await updatePost(editId, {
+          content: content.trim(),
+          category,
+          visibility,
+          groupId: visibility === 'group' ? (profile?.groupId || null) : null,
+        });
+      } else {
+        await createPost({
+          authorId: user.uid,
+          authorName: profile?.fullName || user.email,
+          authorPhotoURL: profile?.photoURL || null,
+          content: content.trim(),
+          category,
+          visibility,
+          groupId: visibility === 'group' ? (profile?.groupId || null) : null,
+        });
+      }
       router.back();
     } catch (e) {
-      Alert.alert('Error', e.message || 'Could not create post.');
+      Alert.alert('Error', e.message || 'Could not save post.');
     } finally { setPosting(false); }
   }
 
@@ -61,14 +84,14 @@ export default function CreatePostScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.topBarBtn}>
           <X size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>New Post</Text>
+        <Text style={styles.topTitle}>{isEditing ? 'Edit Post' : 'New Post'}</Text>
         <TouchableOpacity
           onPress={handlePost}
           disabled={posting || !content.trim()}
           style={[styles.postBtn, (!content.trim() || posting) && styles.postBtnDisabled]}
         >
           <Send size={14} color={Colors.white} />
-          <Text style={styles.postBtnText}>{posting ? '…' : 'Post'}</Text>
+          <Text style={styles.postBtnText}>{posting ? '…' : isEditing ? 'Save' : 'Post'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -80,7 +103,7 @@ export default function CreatePostScreen() {
             <Avatar uri={profile?.photoURL} name={profile?.fullName} size={46} />
             <View>
               <Text style={styles.authorName}>{profile?.fullName || 'Member'}</Text>
-              <Text style={styles.postingAs}>Posting to stream</Text>
+              <Text style={styles.postingAs}>{isEditing ? 'Editing your post' : 'Posting to stream'}</Text>
             </View>
           </View>
 
@@ -93,6 +116,9 @@ export default function CreatePostScreen() {
             numberOfLines={8}
             inputStyle={styles.contentInput}
           />
+          <Text style={styles.formatHint}>
+            Format: *bold*  _italic_  ~strikethrough~
+          </Text>
 
           {/* Category */}
           <Text style={styles.sectionLabel}>Category</Text>
@@ -132,7 +158,7 @@ export default function CreatePostScreen() {
             })}
           </View>
 
-          <PrimaryButton title="Share Post" onPress={handlePost} loading={posting} style={styles.shareBtn} />
+          <PrimaryButton title={isEditing ? 'Save Changes' : 'Share Post'} onPress={handlePost} loading={posting} style={styles.shareBtn} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -161,6 +187,10 @@ const styles = StyleSheet.create({
   authorName: { fontSize: Typography.base, fontWeight: Typography.semiBold, color: Colors.text },
   postingAs: { fontSize: Typography.xs, color: Colors.textLight },
   contentInput: { fontSize: Typography.md, minHeight: 120 },
+  formatHint: {
+    fontSize: Typography.xs, color: Colors.textLight,
+    marginTop: -Spacing.xs, marginBottom: Spacing.base,
+  },
   sectionLabel: {
     fontSize: Typography.sm, fontWeight: Typography.bold, color: Colors.textSecondary,
     marginBottom: Spacing.sm, marginTop: Spacing.sm,

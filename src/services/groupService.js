@@ -109,10 +109,13 @@ export async function claimLeaderCode(code, userId) {
     usedAt: serverTimestamp(),
   });
 
+  // leaderClaimCodeId lets the security rules verify this role change:
+  // the referenced code doc must already be marked usedBy this user.
   await updateDoc(doc(db, 'users', userId), {
     role,
     groupId,
     leaderClaimCode: code,
+    leaderClaimCodeId: codeDoc.id,
     updatedAt: serverTimestamp(),
   });
 

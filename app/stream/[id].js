@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, getDoc } from 'firebase/firestore';
-import { Heart, MessageCircle, SendHorizonal } from 'lucide-react-native';
+import { Heart, MessageCircle, SendHorizonal, Pencil } from 'lucide-react-native';
 import { db } from '../../src/firebase/config';
 import { useAuthContext } from '../../src/context/AuthContext';
-import { getComments, addComment } from '../../src/services/streamService';
+import { getComments, addComment, toggleLike, hasUserLiked } from '../../src/services/streamService';
 import Avatar from '../../src/components/Avatar';
+import FormattedText from '../../src/components/FormattedText';
 import AppHeader from '../../src/components/AppHeader';
 import LoadingState from '../../src/components/LoadingState';
 import Colors from '../../src/constants/colors';
@@ -25,23 +26,45 @@ const CATEGORY_LABEL = {
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const { user, profile } = useAuthContext();
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [toggling, setToggling] = useState(false);
 
-  useEffect(() => { loadPost(); }, [id]);
+  // reload on focus so edits made in the edit screen show up on return
+  useFocusEffect(useCallback(() => { loadPost(); }, [id]));
 
   async function loadPost() {
     try {
       const snap = await getDoc(doc(db, 'streamPosts', id));
-      if (snap.exists()) setPost({ id: snap.id, ...snap.data() });
+      if (snap.exists()) {
+        const data = snap.data();
+        setPost({ ...data, id: snap.id });
+        setLikeCount(data.likeCount || 0);
+      }
       const c = await getComments(id);
       setComments(c);
+      if (user) setLiked(await hasUserLiked(id, user.uid));
     } catch (e) { console.warn(e); }
     finally { setLoading(false); }
+  }
+
+  async function handleLike() {
+    if (!user || toggling) return;
+    setToggling(true);
+    try {
+      const nowLiked = await toggleLike(id, user.uid);
+      setLiked(nowLiked);
+      setLikeCount(c => nowLiked ? c + 1 : c - 1);
+    } catch (e) {
+      console.warn(e);
+    } finally { setToggling(false); }
   }
 
   async function handleSubmitComment() {
@@ -70,9 +93,19 @@ export default function PostDetailScreen() {
     </SafeAreaView>
   );
 
+  const isOwnPost = post.authorId === user?.uid;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <AppHeader title="Post" showBack />
+      <AppHeader
+        title="Post"
+        showBack
+        right={isOwnPost ? (
+          <TouchableOpacity onPress={() => router.push(`/stream/create?editId=${post.id}`)} hitSlop={8}>
+            <Pencil size={18} color={Colors.primary} />
+          </TouchableOpacity>
+        ) : null}
+      />
       <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* Post */}
@@ -81,18 +114,24 @@ export default function PostDetailScreen() {
               <Avatar uri={post.authorPhotoURL} name={post.authorName} size={44} />
               <View style={styles.authorInfo}>
                 <Text style={styles.authorName}>{post.authorName}</Text>
-                <Text style={styles.postTime}>{formatRelativeTime(post.createdAt)}</Text>
+                <Text style={styles.postTime}>
+                  {formatRelativeTime(post.createdAt)}{post.isEdited ? ' · edited' : ''}
+                </Text>
               </View>
               <View style={styles.catBadge}>
                 <Text style={styles.catText}>{CATEGORY_LABEL[post.category] || post.category}</Text>
               </View>
             </View>
-            <Text style={styles.postContent}>{post.content}</Text>
+            <FormattedText style={styles.postContent}>{post.content}</FormattedText>
             <View style={styles.postStats}>
-              <View style={styles.statRow}>
-                <Heart size={14} color={Colors.error} fill={Colors.error} />
-                <Text style={styles.statText}>{post.likeCount || 0} likes</Text>
-              </View>
+              <TouchableOpacity style={styles.statRow} onPress={handleLike} disabled={toggling} hitSlop={6}>
+                <Heart
+                  size={16}
+                  color={liked ? Colors.error : Colors.textSecondary}
+                  fill={liked ? Colors.error : 'transparent'}
+                />
+                <Text style={[styles.statText, liked && styles.likedText]}>{likeCount} likes</Text>
+              </TouchableOpacity>
               <View style={styles.statRow}>
                 <MessageCircle size={14} color={Colors.textSecondary} />
                 <Text style={styles.statText}>{post.commentCount || 0} comments</Text>
@@ -110,7 +149,7 @@ export default function PostDetailScreen() {
                   <Text style={styles.commentAuthor}>{c.authorName}</Text>
                   <Text style={styles.commentTime}>{formatRelativeTime(c.createdAt)}</Text>
                 </View>
-                <Text style={styles.commentText}>{c.content}</Text>
+                <FormattedText style={styles.commentText}>{c.content}</FormattedText>
               </View>
             </View>
           ))}
@@ -162,6 +201,7 @@ const styles = StyleSheet.create({
   postStats: { flexDirection: 'row', gap: Spacing.base, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.divider },
   statRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statText: { fontSize: Typography.sm, color: Colors.textSecondary },
+  likedText: { color: Colors.error },
   commentsTitle: { fontSize: Typography.base, fontWeight: Typography.bold, color: Colors.text, marginBottom: Spacing.md },
   commentCard: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md, alignItems: 'flex-start' },
   commentBody: { flex: 1, backgroundColor: Colors.surfaceAlt, borderRadius: 12, padding: Spacing.sm },
