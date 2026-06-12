@@ -53,6 +53,25 @@ service cloud.firestore {
         && claim.groupId == request.resource.data.groupId;
     }
 
+    // Kick: a group leader may detach members and co-leaders of their group;
+    // a co-leader may detach regular members only. The kicked user's doc may
+    // only change to groupId=null + role='member' — nothing else.
+    function isValidKick() {
+      return resource.data.groupId != null
+        && resource.data.role != 'leader'
+        && (
+          get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.leaderId == request.auth.uid
+          || (
+            request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.coLeaderIds
+            && resource.data.role == 'member'
+          )
+        )
+        && request.resource.data.groupId == null
+        && request.resource.data.role == 'member'
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['groupId', 'role', 'updatedAt']);
+    }
+
     match /users/{uid} {
       allow read: if isAuthed();
 
@@ -61,7 +80,8 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (isOwner(uid)
           && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role))
-        || (isOwner(uid) && hasValidLeaderClaim());
+        || (isOwner(uid) && hasValidLeaderClaim())
+        || (isAuthed() && isValidKick());
     }
 
 
@@ -171,6 +191,20 @@ service cloud.firestore {
       allow create: if isAdmin() || (isLeader() && request.resource.data.groupId != null);
       allow update, delete: if isAdmin()
         || (isLeader() && resource.data.groupId != null && isGroupLeader(resource.data.groupId));
+    }
+
+
+    // ─── Schedule RSVPs ────────────────────────────────────────────────────────
+    // One doc per user per event (id: `${scheduleId}_${userId}`).
+    // Users manage only their own RSVP; leaders/admins can read all for reports.
+
+    match /scheduleRsvps/{rsvpId} {
+      allow read: if isAuthed();
+      allow create, update: if isAuthed()
+        && request.resource.data.userId == request.auth.uid
+        && rsvpId == request.resource.data.scheduleId + '_' + request.auth.uid;
+      allow delete: if isAuthed() && resource.data.userId == request.auth.uid
+        || isAdmin();
     }
 
 

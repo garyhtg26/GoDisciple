@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader';
 import AdminTable from '../components/AdminTable';
 import Modal, { FormField, adminInput } from '../components/Modal';
 import ImageUpload from '../components/ImageUpload';
+import explainError from '../utils/explainError';
 
 const BLANK = { title: '', excerpt: '', imageURL: '', category: 'NEWS' };
 
@@ -37,13 +38,19 @@ export default function NewsPage() {
       }
       setShowModal(false);
       await load();
+    } catch (e) {
+      alert(explainError(e, 'save'));
     } finally { setSaving(false); }
   }
 
   async function handleDelete(id) {
     if (!confirm('Delete this news item?')) return;
-    await deleteDoc(doc(db, 'news', id));
-    await load();
+    try {
+      await deleteDoc(doc(db, 'news', id));
+      await load();
+    } catch (e) {
+      alert(explainError(e, 'delete'));
+    }
   }
 
   const columns = [

@@ -3,6 +3,7 @@ import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import PageHeader from '../components/PageHeader';
 import AdminTable from '../components/AdminTable';
+import explainError from '../utils/explainError';
 
 const ROLES = ['member', 'leader', 'coLeader', 'admin'];
 const ROLE_COLOR = { admin: '#F0D4D4', leader: '#D4E8D4', coLeader: '#D4E0F0', member: '#E8E2D9' };
@@ -28,6 +29,8 @@ export default function UsersPage() {
     try {
       await updateDoc(doc(db, 'users', userId), { role: newRole });
       await load();
+    } catch (e) {
+      alert(explainError(e, 'update'));
     } finally { setUpdating(null); }
   }
 

@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, Linking,
+  View, Text, StyleSheet, ScrollView, Image, ImageBackground,
+  TouchableOpacity, Alert, Linking, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, MapPin, Users, Instagram, MessageCircle, ChevronRight } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import {
+  ArrowLeft, MapPin, Users, Instagram, MessageCircle,
+  Camera, ImagePlus, CheckCircle,
+} from 'lucide-react-native';
 import { useAuthContext } from '../../src/context/AuthContext';
-import { getGroup, requestJoinGroup, getDiscipleshipRelations } from '../../src/services/groupService';
+import { getGroup, requestJoinGroup, getDiscipleshipRelations, updateGroup } from '../../src/services/groupService';
 import { getUserProfile } from '../../src/services/userService';
+import { uploadImage } from '../../src/services/imageUploadService';
 import Avatar from '../../src/components/Avatar';
 import PrimaryButton from '../../src/components/PrimaryButton';
 import SecondaryButton from '../../src/components/SecondaryButton';
@@ -28,6 +34,7 @@ export default function GroupDetailScreen() {
   const [relations, setRelations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [uploadingField, setUploadingField] = useState(null); // 'logoURL' | 'coverURL'
 
   useEffect(() => { loadGroup(); }, [id]);
 
@@ -51,6 +58,26 @@ export default function GroupDetailScreen() {
       setMembers(memberProfiles.filter(Boolean));
     } catch (e) { console.warn(e); }
     finally { setLoading(false); }
+  }
+
+  // Leader picks a new logo (square) or cover (landscape) → upload → save.
+  async function changeGroupImage(field) {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: field === 'logoURL' ? [1, 1] : [16, 10],
+      quality: 0.8,
+      base64: true,
+    });
+    if (result.canceled) return;
+    setUploadingField(field);
+    try {
+      const url = await uploadImage(result.assets[0].base64);
+      await updateGroup(id, { [field]: url });
+      setGroup(g => ({ ...g, [field]: url }));
+    } catch (e) {
+      Alert.alert('Upload failed', e.message || 'Could not update image.');
+    } finally { setUploadingField(null); }
   }
 
   async function handleJoinRequest() {
@@ -80,15 +107,51 @@ export default function GroupDetailScreen() {
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
-        {/* Hero */}
-        <View style={styles.hero}>
-          {group.logoURL ? (
-            <Image source={{ uri: group.logoURL }} style={styles.logo} />
-          ) : (
-            <View style={styles.logoPlaceholder}>
-              <Image source={require('../../assets/logo-white.png')} style={styles.logoFallback} resizeMode="contain" />
-            </View>
+        {/* Hero — cover photo background */}
+        <ImageBackground
+          source={group.coverURL ? { uri: group.coverURL } : null}
+          style={styles.hero}
+          imageStyle={styles.heroImg}
+        >
+          <View style={[styles.heroOverlay, !group.coverURL && styles.heroSolid]} />
+
+          {/* Leader: change cover */}
+          {isLeaderHere && (
+            <TouchableOpacity
+              style={styles.coverBtn}
+              onPress={() => changeGroupImage('coverURL')}
+              disabled={!!uploadingField}
+              hitSlop={6}
+            >
+              {uploadingField === 'coverURL'
+                ? <ActivityIndicator size="small" color={Colors.white} />
+                : <ImagePlus size={16} color={Colors.white} />}
+            </TouchableOpacity>
           )}
+
+          {/* Logo + leader: change logo */}
+          <View style={styles.logoWrap}>
+            {group.logoURL ? (
+              <Image source={{ uri: group.logoURL }} style={styles.logo} />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Image source={require('../../assets/logo-white.png')} style={styles.logoFallback} resizeMode="contain" />
+              </View>
+            )}
+            {isLeaderHere && (
+              <TouchableOpacity
+                style={styles.logoBtn}
+                onPress={() => changeGroupImage('logoURL')}
+                disabled={!!uploadingField}
+                hitSlop={6}
+              >
+                {uploadingField === 'logoURL'
+                  ? <ActivityIndicator size="small" color={Colors.white} />
+                  : <Camera size={13} color={Colors.white} />}
+              </TouchableOpacity>
+            )}
+          </View>
+
           <Text style={styles.groupName}>{group.name}</Text>
           {group.location && (
             <View style={styles.heroMeta}>
@@ -103,7 +166,7 @@ export default function GroupDetailScreen() {
             </View>
           )}
           <Text style={styles.memberCount}>{memberCount} member{memberCount !== 1 ? 's' : ''}</Text>
-        </View>
+        </ImageBackground>
 
         {group.description ? (
           <View style={styles.card}>
@@ -166,7 +229,8 @@ export default function GroupDetailScreen() {
         <View style={styles.actions}>
           {isMyGroup ? (
             <View style={styles.myGroupBanner}>
-              <Text style={styles.myGroupText}>✅ You are in this group</Text>
+              <CheckCircle size={18} color={Colors.white} />
+              <Text style={styles.myGroupText}>You are in this group</Text>
             </View>
           ) : (
             <PrimaryButton title="Request to Join" onPress={handleJoinRequest} loading={requesting} />
@@ -203,13 +267,32 @@ const styles = StyleSheet.create({
   backText: { fontSize: Typography.base, color: Colors.primary, fontWeight: Typography.medium },
   hero: {
     alignItems: 'center', paddingVertical: Spacing.xl,
-    backgroundColor: Colors.primaryDark, borderRadius: 20, marginBottom: Spacing.base,
+    borderRadius: 20, marginBottom: Spacing.base, overflow: 'hidden',
+    // black base: shows when there is no cover, while it loads, or if it fails
+    backgroundColor: Colors.primaryDark,
   },
-  logo: { width: 80, height: 80, borderRadius: 20, resizeMode: 'cover', marginBottom: Spacing.md, backgroundColor: Colors.surfaceAlt },
+  heroImg: { borderRadius: 20, resizeMode: 'cover' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  heroSolid: { backgroundColor: Colors.primaryDark },
+  coverBtn: {
+    position: 'absolute', top: 12, right: 12,
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  logoWrap: { marginBottom: Spacing.md },
+  logo: { width: 80, height: 80, borderRadius: 20, resizeMode: 'cover', backgroundColor: Colors.surfaceAlt },
   logoPlaceholder: {
     width: 80, height: 80, borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  logoBtn: {
+    position: 'absolute', bottom: -4, right: -4,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: Colors.primary,
+    borderWidth: 2, borderColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center',
   },
   logoFallback: { width: 46, height: 46, opacity: 0.6 },
   groupName: { fontSize: Typography.xl, fontWeight: Typography.bold, color: Colors.white, textAlign: 'center', marginBottom: 6 },
@@ -239,6 +322,9 @@ const styles = StyleSheet.create({
   },
   socialText: { fontSize: Typography.sm, color: Colors.text },
   actions: { marginTop: Spacing.sm },
-  myGroupBanner: { backgroundColor: Colors.success, borderRadius: 12, padding: Spacing.base, alignItems: 'center' },
+  myGroupBanner: {
+    backgroundColor: Colors.success, borderRadius: 12, padding: Spacing.base,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
   myGroupText: { fontSize: Typography.base, color: Colors.white, fontWeight: Typography.semiBold },
 });

@@ -30,6 +30,31 @@ export async function updateGroup(groupId, updates) {
   });
 }
 
+// Remove a member (or co-leader) from the group and reset their profile.
+// Permission is enforced by security rules: the group leader can kick members
+// and co-leaders; a co-leader can kick regular members only.
+export async function kickMember(groupId, targetUserId, { isCoLeader = false } = {}) {
+  const groupSnap = await getDoc(doc(db, 'groups', groupId));
+  if (!groupSnap.exists()) throw new Error('Group not found.');
+  const g = groupSnap.data();
+
+  // demote + detach the user first; rules validate this against the group doc
+  await updateDoc(doc(db, 'users', targetUserId), {
+    groupId: null,
+    role: 'member',
+    updatedAt: serverTimestamp(),
+  });
+
+  const updates = {
+    memberIds: (g.memberIds || []).filter(uid => uid !== targetUserId),
+    updatedAt: serverTimestamp(),
+  };
+  if (isCoLeader) {
+    updates.coLeaderIds = (g.coLeaderIds || []).filter(uid => uid !== targetUserId);
+  }
+  await updateDoc(doc(db, 'groups', groupId), updates);
+}
+
 export async function requestJoinGroup(groupId, userId, message = '') {
   const existing = await getDocs(
     query(

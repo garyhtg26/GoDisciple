@@ -6,8 +6,9 @@ import PageHeader from '../components/PageHeader';
 import AdminTable from '../components/AdminTable';
 import Modal, { FormField, adminInput } from '../components/Modal';
 import ImageUpload from '../components/ImageUpload';
+import explainError from '../utils/explainError';
 
-const BLANK = { name: '', description: '', location: '', ageRange: '', meetingSchedule: '', logoURL: '' };
+const BLANK = { name: '', description: '', location: '', ageRange: '', meetingSchedule: '', logoURL: '', coverURL: '' };
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState([]);
@@ -25,7 +26,7 @@ export default function GroupsPage() {
   function openCreate() { setEditing(null); setForm(BLANK); setShowModal(true); }
   function openEdit(g) {
     setEditing(g.id);
-    setForm({ name: g.name || '', description: g.description || '', location: g.location || '', ageRange: g.ageRange || '', meetingSchedule: g.meetingSchedule || '', logoURL: g.logoURL || '' });
+    setForm({ name: g.name || '', description: g.description || '', location: g.location || '', ageRange: g.ageRange || '', meetingSchedule: g.meetingSchedule || '', logoURL: g.logoURL || '', coverURL: g.coverURL || '' });
     setShowModal(true);
   }
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
@@ -50,6 +51,8 @@ export default function GroupsPage() {
       }
       setShowModal(false);
       await load();
+    } catch (e) {
+      alert(explainError(e, 'save'));
     } finally { setSaving(false); }
   }
 
@@ -91,6 +94,14 @@ export default function GroupsPage() {
             storagePath="group-logos"
             value={form.logoURL}
             onChange={url => set('logoURL', url)}
+          />
+          <ImageUpload
+            label="Cover / Background Photo (optional)"
+            aspect="Landscape recommended · 16:10"
+            storagePath="group-covers"
+            value={form.coverURL}
+            onChange={url => set('coverURL', url)}
+            emptyPreview
           />
           <FormField label="Group Name">
             <input style={adminInput} value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Kelompok Kecil Alpha" />

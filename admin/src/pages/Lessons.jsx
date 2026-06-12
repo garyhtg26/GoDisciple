@@ -8,6 +8,7 @@ import PageHeader from '../components/PageHeader';
 import AdminTable from '../components/AdminTable';
 import Modal, { FormField, adminInput } from '../components/Modal';
 import ImageUpload from '../components/ImageUpload';
+import explainError from '../utils/explainError';
 
 const CATEGORIES = ['Sermon', 'Bible Study', 'Prayer', 'Worship', 'Youth', 'Other'];
 
@@ -78,13 +79,19 @@ export default function LessonsPage() {
       }
       setShowModal(false);
       await load();
+    } catch (e) {
+      alert(explainError(e, 'save'));
     } finally { setSaving(false); }
   }
 
   async function handleDelete(id) {
     if (!confirm('Delete this lesson?')) return;
-    await deleteDoc(doc(db, 'lessons', id));
-    await load();
+    try {
+      await deleteDoc(doc(db, 'lessons', id));
+      await load();
+    } catch (e) {
+      alert(explainError(e, 'delete'));
+    }
   }
 
   async function togglePublish(item) {

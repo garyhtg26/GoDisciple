@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import PageHeader from '../components/PageHeader';
 import AdminTable from '../components/AdminTable';
 import Modal, { FormField, adminInput } from '../components/Modal';
+import explainError from '../utils/explainError';
 
 function generateCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -41,6 +42,8 @@ export default function LeaderCodesPage() {
       setForm({ code: generateCode(), groupId: '', role: 'leader' });
       const snap = await getDocs(collection(db, 'leaderClaimCodes'));
       setCodes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (e) {
+      alert(explainError(e, 'create'));
     } finally {
       setSaving(false);
     }

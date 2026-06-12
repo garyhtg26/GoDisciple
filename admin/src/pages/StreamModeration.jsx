@@ -4,6 +4,7 @@ import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/fi
 import { db } from '../firebase';
 import PageHeader from '../components/PageHeader';
 import AdminTable from '../components/AdminTable';
+import explainError from '../utils/explainError';
 
 function fmtTs(ts) {
   if (!ts) return '—';
@@ -24,8 +25,12 @@ export default function StreamModerationPage() {
 
   async function handleDelete(id) {
     if (!confirm('Delete this post? This cannot be undone.')) return;
-    await deleteDoc(doc(db, 'streamPosts', id));
-    await load();
+    try {
+      await deleteDoc(doc(db, 'streamPosts', id));
+      await load();
+    } catch (e) {
+      alert(explainError(e, 'delete'));
+    }
   }
 
   const CAT_COLOR = { reflection: '#D4E8D4', testimony: '#D4E0F0', prayer: '#F0D4D4', announcement: '#F0EAD4', general: '#E8E2D9' };

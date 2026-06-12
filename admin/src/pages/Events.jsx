@@ -9,6 +9,7 @@ import { db } from '../firebase';
 import PageHeader from '../components/PageHeader';
 import AdminTable from '../components/AdminTable';
 import Modal, { FormField, adminInput } from '../components/Modal';
+import explainError from '../utils/explainError';
 
 function generateCheckInCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -161,6 +162,8 @@ export default function EventsPage() {
       }
       setShowModal(false);
       await load();
+    } catch (e) {
+      alert(explainError(e, 'save'));
     } finally { setSaving(false); }
   }
 

@@ -14,7 +14,7 @@ import Spacing from '../../src/constants/spacing';
 const FONT_SIZES = [14, 16, 18, 20, 22];
 
 export default function ReadScreen() {
-  const { chapterId: initChapterId, bookName, chapterNum, version } = useLocalSearchParams();
+  const { chapterId: initChapterId, bookName, chapterNum, version, highlight } = useLocalSearchParams();
   const router = useRouter();
   const scrollRef = useRef(null);
 
@@ -26,32 +26,53 @@ export default function ReadScreen() {
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(1); // index into FONT_SIZES
   const [showSettings, setShowSettings] = useState(false);
+  // TSI is missing 18 OT books (Job, Psalms, Daniel, …) — fall back to KJV
+  // automatically when a chapter 404s, and tell the reader why.
+  const [activeVersion, setActiveVersion] = useState(version || 'TSI');
+  const [fellBack, setFellBack] = useState(false);
+  // verse to highlight (from a tapped reference); cleared on chapter change
+  const [highlightVerse, setHighlightVerse] = useState(highlight ? parseInt(highlight, 10) : null);
+
+  // verse numbers can be ranges in TSI, e.g. "1-2"
+  function isHighlighted(verseNum) {
+    if (!highlightVerse) return false;
+    const m = String(verseNum).match(/^(\d+)(?:-(\d+))?$/);
+    if (!m) return false;
+    const start = +m[1], end = m[2] ? +m[2] : start;
+    return highlightVerse >= start && highlightVerse <= end;
+  }
 
   // bookId from chapterId e.g. "GEN.1" → "GEN"
   const bookId = chapterId.split('.').slice(0, -1).join('.');
 
   useEffect(() => {
-    getChapters(version, bookId)
+    getChapters(activeVersion, bookId)
       .then(data => setAllChapters(data.filter(c => !c.id.endsWith('.intro'))))
-      .catch(console.error);
-  }, [bookId, version]);
+      .catch(console.warn);
+  }, [bookId, activeVersion]);
 
   const loadChapter = useCallback(async (cid) => {
     setLoading(true);
     setVerses([]);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     try {
-      const data = await getChapter(version, cid);
+      const data = await getChapter(activeVersion, cid);
       const parsed = parseVerses(data.content);
       setVerses(parsed);
       setCurrentChapterNum(Number(data.number));
       setCurrentBookName(data.bookId ? data.reference?.split(' ').slice(0, -1).join(' ') : currentBookName);
     } catch (e) {
-      console.error(e);
+      if (activeVersion === 'TSI') {
+        // book not available in TSI — switch to KJV; effect below reloads
+        setFellBack(true);
+        setActiveVersion('KJV');
+        return;
+      }
+      console.warn(e);
     } finally {
       setLoading(false);
     }
-  }, [version, currentBookName]);
+  }, [activeVersion, currentBookName]);
 
   useEffect(() => {
     loadChapter(chapterId);
@@ -63,7 +84,10 @@ export default function ReadScreen() {
 
   const goChapter = (idx) => {
     const ch = allChapters[idx];
-    if (ch) setChapterId(ch.id);
+    if (ch) {
+      setHighlightVerse(null);
+      setChapterId(ch.id);
+    }
   };
 
   return (
@@ -75,7 +99,7 @@ export default function ReadScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerBook}>{currentBookName}</Text>
-          <Text style={styles.headerChapter}>{VERSIONS[version]?.label} · Pasal {currentChapterNum}</Text>
+          <Text style={styles.headerChapter}>{VERSIONS[activeVersion]?.label} · Pasal {currentChapterNum}</Text>
         </View>
         <TouchableOpacity onPress={() => setShowSettings(s => !s)} style={styles.headerBtn} hitSlop={8}>
           <Settings2 size={20} color={Colors.primary} />
@@ -107,15 +131,36 @@ export default function ReadScreen() {
         </View>
       ) : (
         <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {fellBack && (
+            <View style={styles.fallbackNote}>
+              <Text style={styles.fallbackNoteText}>
+                Kitab ini belum tersedia di TSI — menampilkan KJV (English).
+              </Text>
+            </View>
+          )}
           <Text style={[styles.chapterTitle]}>
             {currentBookName} {currentChapterNum}
           </Text>
-          {verses.map((v, idx) => (
-            <Text key={idx} style={[styles.verse, { fontSize: FONT_SIZES[fontSize], lineHeight: FONT_SIZES[fontSize] * 1.85 }]}>
-              <Text style={styles.verseNum}>{v.number}  </Text>
-              {v.text}
-            </Text>
-          ))}
+          {verses.map((v, idx) => {
+            const hl = isHighlighted(v.number);
+            return (
+              <Text
+                key={idx}
+                style={[
+                  styles.verse,
+                  { fontSize: FONT_SIZES[fontSize], lineHeight: FONT_SIZES[fontSize] * 1.85 },
+                  hl && styles.verseHighlight,
+                ]}
+                onLayout={hl ? (e => {
+                  const y = e.nativeEvent.layout.y;
+                  scrollRef.current?.scrollTo({ y: Math.max(0, y - 90), animated: true });
+                }) : undefined}
+              >
+                <Text style={styles.verseNum}>{v.number}  </Text>
+                {v.text}
+              </Text>
+            );
+          })}
           {verses.length === 0 && (
             <Text style={styles.emptyText}>Konten tidak tersedia untuk pasal ini.</Text>
           )}
@@ -203,6 +248,23 @@ const styles = StyleSheet.create({
   verse: {
     color: Colors.text,
     marginBottom: 4,
+  },
+  verseHighlight: {
+    backgroundColor: '#FBF3D0',   // soft highlighter yellow
+    borderRadius: 4,
+  },
+  fallbackNote: {
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: 10,
+    padding: Spacing.md,
+    marginBottom: Spacing.base,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  fallbackNoteText: {
+    fontSize: Typography.xs,
+    color: Colors.textSecondary,
+    lineHeight: Typography.xs * 1.6,
   },
   verseNum: {
     fontWeight: Typography.bold,

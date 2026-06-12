@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { updateProfile } from 'firebase/auth';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { updateUserProfile } from '../../src/services/userService';
+import { uploadImage } from '../../src/services/imageUploadService';
 import { auth } from '../../src/firebase/config';
 import InputField from '../../src/components/InputField';
 import PrimaryButton from '../../src/components/PrimaryButton';
@@ -26,23 +27,29 @@ export default function EditProfileScreen() {
   const [fullName, setFullName] = useState(profile?.fullName || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [photoURI, setPhotoURI] = useState(profile?.photoURL || null);
+  const [photoBase64, setPhotoBase64] = useState(null);
   const [saving, setSaving] = useState(false);
 
   async function pickPhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true, aspect: [1, 1], quality: 0.7,
+      base64: true,
     });
-    if (!result.canceled) setPhotoURI(result.assets[0].uri);
+    if (!result.canceled) {
+      setPhotoURI(result.assets[0].uri);       // local preview
+      setPhotoBase64(result.assets[0].base64); // payload for upload on save
+    }
   }
 
   async function handleSave() {
     if (!fullName.trim()) { Alert.alert('Validation', 'Full name is required.'); return; }
     setSaving(true);
     try {
-      // Note: photo upload requires Firebase Storage.
-      // Without Storage, photoURL stays as-is or can be a URL pasted by user.
-      const photoURL = photoURI || profile?.photoURL || null;
+      let photoURL = profile?.photoURL || null;
+      if (photoBase64) {
+        photoURL = await uploadImage(photoBase64);
+      }
 
       await updateUserProfile(user.uid, { fullName: fullName.trim(), phone: phone.trim(), photoURL });
       await updateProfile(auth.currentUser, { displayName: fullName.trim(), photoURL });
@@ -70,8 +77,7 @@ export default function EditProfileScreen() {
               <Text style={styles.changePhotoText}>Change Photo</Text>
             </TouchableOpacity>
             <Text style={styles.photoNote}>
-              📌 Photo upload requires Firebase Storage setup.{'\n'}
-              For now, your avatar will show initials if no photo is set.
+              Square photos look best. Your photo is uploaded when you save.
             </Text>
           </View>
 
