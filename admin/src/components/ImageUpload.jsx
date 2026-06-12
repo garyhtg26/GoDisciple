@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 
 /**
  * ImageUpload — URL-only image input (no Firebase Storage required)
@@ -55,7 +56,7 @@ export default function ImageUpload({ value, onChange, label = 'Image', aspect }
               width: 28, height: 28, cursor: 'pointer',
               fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
-          >✕</button>
+          ><X size={14} /></button>
         </div>
       )}
 

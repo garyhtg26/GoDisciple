@@ -59,7 +59,7 @@ export default function LeaderCodesPage() {
 
   return (
     <div>
-      <PageHeader title="Leader Claim Codes" subtitle="Generate codes for leaders to claim their role via the mobile app." action={{ label: '+ Generate Code', icon: '🔑', onClick: () => setShowModal(true) }} />
+      <PageHeader title="Leader Claim Codes" subtitle="Generate codes for leaders to claim their role via the mobile app." action={{ label: '+ Generate Code', onClick: () => setShowModal(true) }} />
       <AdminTable columns={columns} rows={codes} emptyLabel="No codes generated yet." />
 
       {showModal && (

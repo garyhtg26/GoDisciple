@@ -4,8 +4,8 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebas
 import { doc, getDoc } from 'firebase/firestore';
 import {
   LayoutDashboard, Image, Newspaper, BookOpen, Users, Calendar,
-  Key, CheckSquare, Sparkles, ClipboardList, UserCog, Video,
-  LogOut, ChevronRight, Mail, Lock, Eye, EyeOff, ArrowRight,
+  Key, CheckSquare, Sparkles, ClipboardList, UserCog, Video, QrCode,
+  LogOut, ChevronRight, Mail, Lock, Eye, EyeOff, ArrowRight, AlertTriangle,
 } from 'lucide-react';
 import { auth, db } from './firebase';
 
@@ -22,6 +22,7 @@ import StreamModerationPage from './pages/StreamModeration';
 import JoinRequestsPage from './pages/JoinRequests';
 import UsersPage from './pages/Users';
 import LessonsPage from './pages/Lessons';
+import EventsPage from './pages/Events';
 
 // ── Design Tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -263,6 +264,7 @@ const NAV_ITEMS = [
   {
     section: 'Activity',
     items: [
+      { path: '/events',     label: 'Check-in QR',  icon: QrCode },
       { path: '/attendance', label: 'Attendance',   icon: CheckSquare },
       { path: '/stream',     label: 'Stream Posts', icon: Sparkles },
     ],
@@ -334,7 +336,7 @@ function LoginPage({ onLogin }) {
         <form onSubmit={handleLogin}>
           {error && (
             <div style={s.loginErr}>
-              <span style={{ fontSize: 16 }}>⚠</span>
+              <AlertTriangle size={15} style={{ flexShrink: 0 }} />
               {error}
             </div>
           )}
@@ -527,6 +529,7 @@ export default function App() {
               <Route path="/groups"        element={<GroupsPage />} />
               <Route path="/schedules"     element={<SchedulesPage />} />
               <Route path="/leader-codes"  element={<LeaderCodesPage />} />
+              <Route path="/events"        element={<EventsPage />} />
               <Route path="/attendance"    element={<AttendancePage />} />
               <Route path="/stream"        element={<StreamModerationPage />} />
               <Route path="/join-requests" element={<JoinRequestsPage />} />

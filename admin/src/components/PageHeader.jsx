@@ -2,10 +2,10 @@ import React from 'react';
 
 const s = {
   header: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 },
-  title: { fontSize: 22, fontWeight: 700, color: '#1A1A1A' },
+  title: { fontSize: 22, fontWeight: 700, color: '#0D0D0D' },
   sub: { fontSize: 13, color: '#6B6B6B', marginTop: 3 },
   btn: {
-    padding: '10px 20px', backgroundColor: '#C17A3A', color: '#fff',
+    padding: '10px 20px', backgroundColor: '#0D0D0D', color: '#fff',
     border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600,
     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
   },

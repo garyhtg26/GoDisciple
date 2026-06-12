@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Heart, MessageCircle } from 'lucide-react';
 import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import PageHeader from '../components/PageHeader';
@@ -33,8 +34,8 @@ export default function StreamModerationPage() {
     { key: 'authorName', label: 'Author' },
     { key: 'category', label: 'Category', render: r => <span style={{ background: CAT_COLOR[r.category] || '#eee', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>{r.category}</span> },
     { key: 'content', label: 'Content', render: r => <span style={{ color: '#3A3A3A' }}>{(r.content || '').slice(0, 100)}{(r.content || '').length > 100 ? '…' : ''}</span> },
-    { key: 'likeCount', label: '♥', width: 50 },
-    { key: 'commentCount', label: '💬', width: 50 },
+    { key: 'likeCount', label: <Heart size={13} style={{ verticalAlign: 'middle' }} />, width: 50 },
+    { key: 'commentCount', label: <MessageCircle size={13} style={{ verticalAlign: 'middle' }} />, width: 50 },
     { key: '_', label: '', render: r => (
       <button onClick={() => handleDelete(r.id)} style={{ padding: '4px 10px', background: '#FFF0F0', border: '1px solid #E05252', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#E05252' }}>
         Remove
