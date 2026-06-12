@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PenSquare, Sparkles } from 'lucide-react-native';
 import { useAuthContext } from '../../src/context/AuthContext';
@@ -49,7 +49,8 @@ export default function StreamScreen() {
     }
   }
 
-  useEffect(() => { setLoading(true); setLastDoc(null); loadPosts(true); }, [filter]);
+  // reload whenever the tab regains focus (e.g. after creating or editing a post)
+  useFocusEffect(useCallback(() => { setLastDoc(null); loadPosts(true); }, [filter]));
   const onRefresh = useCallback(() => { setRefreshing(true); setLastDoc(null); loadPosts(true); }, [filter]);
 
   function onEndReached() {

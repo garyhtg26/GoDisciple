@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Cross } from 'lucide-react';
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import PageHeader from '../components/PageHeader';
@@ -55,7 +56,7 @@ export default function GroupsPage() {
   const columns = [
     { key: 'logoURL', label: 'Logo', width: 70, render: r => r.logoURL
       ? <img src={r.logoURL} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 10 }} />
-      : <div style={{ width: 44, height: 44, background: '#EDD9B8', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>✝</div>
+      : <div style={{ width: 44, height: 44, background: '#EBEBEB', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Cross size={20} color="#555" /></div>
     },
     { key: 'name', label: 'Group Name', render: r => <strong>{r.name}</strong> },
     { key: 'location', label: 'Location' },

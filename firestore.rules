@@ -42,14 +42,26 @@ service cloud.firestore {
     // Users can update only their own safe fields (not role).
     // Only admins can set admin roles.
 
+    // Does the claim code referenced by the incoming user doc actually grant
+    // this role to this user? The code doc must be marked used by them first.
+    function hasValidLeaderClaim() {
+      let claim = get(/databases/$(database)/documents/leaderClaimCodes/$(request.resource.data.leaderClaimCodeId)).data;
+      return request.resource.data.role in ['leader', 'coLeader']
+        && claim.isUsed == true
+        && claim.usedBy == request.auth.uid
+        && claim.role == request.resource.data.role
+        && claim.groupId == request.resource.data.groupId;
+    }
+
     match /users/{uid} {
       allow read: if isAuthed();
 
       allow create: if isOwner(uid);
 
-      allow update: if isOwner(uid)
-        && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role)
-        || isAdmin();
+      allow update: if isAdmin()
+        || (isOwner(uid)
+          && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role))
+        || (isOwner(uid) && hasValidLeaderClaim());
     }
 
 
@@ -58,10 +70,18 @@ service cloud.firestore {
     // Only admins can create groups.
     // Leaders/coLeaders can update their own group; admins can update any.
 
+    // A user whose own profile already assigns them as leader/coLeader of this
+    // group (e.g. right after claiming a leader code, before the group doc
+    // points back at them yet).
+    function isAssignedLeader(groupId) {
+      let me = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return (me.role == 'leader' || me.role == 'coLeader') && me.groupId == groupId;
+    }
+
     match /groups/{groupId} {
       allow read: if isAuthed();
       allow create: if isAdmin();
-      allow update: if isAdmin() || isGroupLeader(groupId);
+      allow update: if isAdmin() || isGroupLeader(groupId) || isAssignedLeader(groupId);
       allow delete: if isAdmin();
     }
 
@@ -100,7 +120,16 @@ service cloud.firestore {
     match /leaderClaimCodes/{codeId} {
       allow read: if isAuthed();
       allow create: if isAdmin();
-      allow update: if isAuthed(); // service handles validation logic
+      // A non-admin may only claim an unused code for themselves, and may not
+      // alter what the code grants (code/role/groupId are immutable).
+      allow update: if isAdmin()
+        || (isAuthed()
+          && resource.data.isUsed == false
+          && request.resource.data.isUsed == true
+          && request.resource.data.usedBy == request.auth.uid
+          && request.resource.data.code == resource.data.code
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.groupId == resource.data.groupId);
       allow delete: if isAdmin();
     }
 
@@ -146,9 +175,12 @@ service cloud.firestore {
 
 
     // ─── Events ────────────────────────────────────────────────────────────────
+    // Leaders and co-leaders may create check-in events (QR) for their
+    // services; only admins can delete.
     match /events/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin();
+      allow create, update: if isLeader();
+      allow delete: if isAdmin();
     }
 
 
@@ -172,8 +204,13 @@ service cloud.firestore {
     match /streamPosts/{postId} {
       allow read: if isAuthed();
       allow create: if isAuthed();
-      allow update: if isAuthed() && resource.data.authorId == request.auth.uid
-        || isAdmin();
+      // Author or admin may edit anything; any authed user may only bump the
+      // like/comment counters (needed by toggleLike and addComment).
+      allow update: if isAdmin()
+        || (isAuthed() && resource.data.authorId == request.auth.uid)
+        || (isAuthed()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likeCount', 'commentCount']));
       allow delete: if isAuthed() && resource.data.authorId == request.auth.uid
         || isAdmin();
     }

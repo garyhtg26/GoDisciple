@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Heart, MessageCircle } from 'lucide-react-native';
+import { Heart, MessageCircle, Pencil } from 'lucide-react-native';
 import Colors from '../constants/colors';
 import Typography from '../constants/typography';
 import Spacing from '../constants/spacing';
 import Avatar from './Avatar';
+import FormattedText from './FormattedText';
 import { formatRelativeTime } from '../utils/formatDate';
 import { toggleLike, hasUserLiked } from '../services/streamService';
 
@@ -48,15 +49,26 @@ export default function StreamPostCard({ post, currentUserId }) {
         <Avatar uri={post.authorPhotoURL} name={post.authorName} size={40} />
         <View style={styles.authorInfo}>
           <Text style={styles.authorName}>{post.authorName}</Text>
-          <Text style={styles.time}>{formatRelativeTime(post.createdAt)}</Text>
+          <Text style={styles.time}>
+            {formatRelativeTime(post.createdAt)}{post.isEdited ? ' · edited' : ''}
+          </Text>
         </View>
         <View style={[styles.catBadge, { backgroundColor: cat.bg }]}>
           <Text style={styles.catLabel}>{cat.label}</Text>
         </View>
+        {post.authorId === currentUserId && (
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => router.push(`/stream/create?editId=${post.id}`)}
+            hitSlop={8}
+          >
+            <Pencil size={14} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <TouchableOpacity onPress={() => router.push(`/stream/${post.id}`)} activeOpacity={0.9}>
-        <Text style={styles.content}>{post.content}</Text>
+        <FormattedText style={styles.content}>{post.content}</FormattedText>
       </TouchableOpacity>
 
       <View style={styles.actions}>
@@ -90,6 +102,7 @@ const styles = StyleSheet.create({
   authorName: { fontSize: Typography.sm, fontWeight: Typography.semiBold, color: Colors.text },
   time: { fontSize: Typography.xs, color: Colors.textLight, marginTop: 2 },
   catBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  editBtn: { padding: 4, marginLeft: 2 },
   catLabel: { fontSize: 10, fontWeight: Typography.bold, color: Colors.text, textTransform: 'uppercase', letterSpacing: 0.5 },
   content: { fontSize: Typography.base, color: Colors.text, lineHeight: Typography.base * 1.6, marginBottom: Spacing.md },
   actions: {
