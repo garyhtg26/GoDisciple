@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/logo-white.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0D0D0D"
-    },
     "scheme": "go-disciple",
     "ios": {
       "supportsTablet": true,
@@ -35,6 +30,14 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo-white.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0D0D0D"
+        }
+      ],
       [
         "expo-camera",
         {
