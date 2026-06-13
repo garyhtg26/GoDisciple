@@ -55,7 +55,7 @@ const QUICK_ACTIONS = [
     icon: Moon,
     bg: '#DEDEDE',
     iconColor: '#0D0D0D',
-    route: '/stream/create',
+    route: '/quiet-time',
   },
 ];
 

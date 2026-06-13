@@ -29,10 +29,10 @@ const VISIBILITY = [
 
 export default function CreatePostScreen() {
   const router = useRouter();
-  const { editId } = useLocalSearchParams();
+  const { editId, prefill, category: prefillCategory } = useLocalSearchParams();
   const { user, profile } = useAuthContext();
-  const [content, setContent] = useState('');
-  const [category, setCategory] = useState('reflection');
+  const [content, setContent] = useState(prefill || '');
+  const [category, setCategory] = useState(prefillCategory || 'reflection');
   const [visibility, setVisibility] = useState('public');
   const [posting, setPosting] = useState(false);
 

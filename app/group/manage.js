@@ -32,7 +32,7 @@ export default function ManageGroupScreen() {
 
   async function loadMembers(g) {
     const coIds = g.coLeaderIds || [];
-    const memberIds = (g.memberIds || []).filter(uid => !coIds.includes(uid));
+    const memberIds = (g.memberIds || []).filter(uid => !coIds.includes(uid) && uid !== g.leaderId);
     const [coProfiles, memberProfiles] = await Promise.all([
       Promise.all(coIds.map(uid => getUserProfile(uid).then(p => p && { ...p, uid }))),
       Promise.all(memberIds.map(uid => getUserProfile(uid).then(p => p && { ...p, uid }))),

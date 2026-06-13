@@ -54,7 +54,11 @@ export default function GroupDetailScreen() {
       const coLdrProfiles = await Promise.all((g.coLeaderIds || []).map(uid => getUserProfile(uid)));
       setCoLeaders(coLdrProfiles.filter(Boolean));
 
-      const memberProfiles = await Promise.all((g.memberIds || []).slice(0, 20).map(uid => getUserProfile(uid)));
+      // leaders/co-leaders are shown in the Leadership card — never as members
+      const plainMemberIds = (g.memberIds || []).filter(
+        uid => uid !== g.leaderId && !(g.coLeaderIds || []).includes(uid),
+      );
+      const memberProfiles = await Promise.all(plainMemberIds.slice(0, 20).map(uid => getUserProfile(uid)));
       setMembers(memberProfiles.filter(Boolean));
     } catch (e) { console.warn(e); }
     finally { setLoading(false); }
@@ -96,7 +100,9 @@ export default function GroupDetailScreen() {
 
   const isMyGroup = profile?.groupId === id;
   const isLeaderHere = profile?.groupId === id && ['leader', 'coLeader'].includes(profile?.role);
-  const memberCount = group.memberIds?.length || 0;
+  const memberCount = (group.memberIds || []).filter(
+    uid => uid !== group.leaderId && !(group.coLeaderIds || []).includes(uid),
+  ).length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

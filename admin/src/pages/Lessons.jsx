@@ -8,6 +8,7 @@ import PageHeader from '../components/PageHeader';
 import AdminTable from '../components/AdminTable';
 import Modal, { FormField, adminInput } from '../components/Modal';
 import ImageUpload from '../components/ImageUpload';
+import PdfUpload from '../components/PdfUpload';
 import explainError from '../utils/explainError';
 
 const CATEGORIES = ['Sermon', 'Bible Study', 'Prayer', 'Worship', 'Youth', 'Other'];
@@ -20,6 +21,7 @@ const BLANK = {
   duration: '',
   thumbnailUrl: '',
   videoUrl: '',
+  pdfUrl: '',
   description: '',
   isPublished: true,
 };
@@ -220,6 +222,12 @@ export default function LessonsPage() {
               placeholder="https://youtu.be/..."
             />
           </FormField>
+
+          <PdfUpload
+            label="PDF Material (optional)"
+            value={form.pdfUrl}
+            onChange={url => set('pdfUrl', url)}
+          />
 
           <ImageUpload
             label="Thumbnail Image"

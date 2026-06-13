@@ -102,11 +102,21 @@ export async function reviewJoinRequest(requestId, status, reviewedBy) {
 
   if (status === 'approved') {
     const { userId, groupId } = requestSnap.data();
-    await updateDoc(doc(db, 'users', userId), { groupId, updatedAt: serverTimestamp() });
-    await updateDoc(doc(db, 'groups', groupId), {
-      memberIds: [...(await getMemberIds(groupId)), userId],
-      updatedAt: serverTimestamp(),
-    });
+    const groupSnap = await getDoc(doc(db, 'groups', groupId));
+    const g = groupSnap.exists() ? groupSnap.data() : {};
+
+    // The requester may have become leader/co-leader (via a claim code) while
+    // this request was pending — in that case they're already in the group
+    // with a higher role, so don't add them as a regular member.
+    const alreadyLeader = g.leaderId === userId || (g.coLeaderIds || []).includes(userId);
+    const memberIds = g.memberIds || [];
+    if (!alreadyLeader && !memberIds.includes(userId)) {
+      await updateDoc(doc(db, 'users', userId), { groupId, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'groups', groupId), {
+        memberIds: [...memberIds, userId],
+        updatedAt: serverTimestamp(),
+      });
+    }
   }
 }
 
@@ -144,21 +154,46 @@ export async function claimLeaderCode(code, userId) {
     updatedAt: serverTimestamp(),
   });
 
-  // add to group leader/coLeader fields
+  // add to group leader/coLeader fields — and drop them from memberIds so a
+  // previously-approved membership doesn't leave them listed twice
   const groupSnap = await getDoc(doc(db, 'groups', groupId));
   if (groupSnap.exists()) {
     const groupData = groupSnap.data();
+    const memberIds = (groupData.memberIds || []).filter(uid => uid !== userId);
     if (role === 'leader') {
-      await updateDoc(doc(db, 'groups', groupId), { leaderId: userId, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'groups', groupId), {
+        leaderId: userId,
+        memberIds,
+        updatedAt: serverTimestamp(),
+      });
     } else if (role === 'coLeader') {
       const coLeaderIds = groupData.coLeaderIds || [];
-      if (!coLeaderIds.includes(userId)) {
-        await updateDoc(doc(db, 'groups', groupId), {
-          coLeaderIds: [...coLeaderIds, userId],
-          updatedAt: serverTimestamp(),
-        });
-      }
+      await updateDoc(doc(db, 'groups', groupId), {
+        coLeaderIds: coLeaderIds.includes(userId) ? coLeaderIds : [...coLeaderIds, userId],
+        memberIds,
+        updatedAt: serverTimestamp(),
+      });
     }
+  }
+
+  // void any join requests still pending from this user for this group —
+  // approving them later would have re-added the leader as a member
+  try {
+    const pending = await getDocs(
+      query(
+        collection(db, 'groupJoinRequests'),
+        where('userId', '==', userId),
+        where('groupId', '==', groupId),
+        where('status', '==', 'pending'),
+      ),
+    );
+    await Promise.all(
+      pending.docs.map(d =>
+        updateDoc(d.ref, { status: 'cancelled', reviewedAt: serverTimestamp(), reviewedBy: userId }),
+      ),
+    );
+  } catch (e) {
+    console.warn('Could not cancel pending join requests:', e);
   }
 
   return { groupId, role };

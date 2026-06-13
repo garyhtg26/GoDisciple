@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Play, ArrowLeft, Mic, Calendar, Clock, Tag } from 'lucide-react-native';
+import { Play, ArrowLeft, Mic, Calendar, Clock, Tag, FileText } from 'lucide-react-native';
 import { getLesson } from '../../src/services/lessonService';
 import Colors from '../../src/constants/colors';
 import Typography from '../../src/constants/typography';
@@ -146,6 +146,17 @@ export default function LessonDetailScreen() {
               <Text style={styles.watchBtnText}>Watch / Listen</Text>
             </TouchableOpacity>
           )}
+
+          {lesson.pdfUrl && (
+            <TouchableOpacity
+              style={styles.pdfBtn}
+              onPress={() => Linking.openURL(lesson.pdfUrl)}
+              activeOpacity={0.85}
+            >
+              <FileText size={18} color={Colors.primary} />
+              <Text style={styles.pdfBtnText}>Read Material (PDF)</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -257,5 +268,22 @@ const styles = StyleSheet.create({
     fontSize: Typography.base,
     fontWeight: Typography.semiBold,
     color: Colors.white,
+  },
+  pdfBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    paddingVertical: Spacing.base,
+    borderRadius: 12,
+    marginTop: Spacing.md,
+  },
+  pdfBtnText: {
+    fontSize: Typography.base,
+    fontWeight: Typography.semiBold,
+    color: Colors.primary,
   },
 });
