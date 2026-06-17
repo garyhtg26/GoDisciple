@@ -27,10 +27,15 @@ export function useAuth() {
   }, []);
 
   const refreshProfile = async () => {
-    if (user) {
-      const p = await getUserProfile(user.uid);
+    // Fall back to auth.currentUser: right after sign-up the `user` state may
+    // not have propagated yet, but auth.currentUser is already set.
+    const uid = user?.uid || auth.currentUser?.uid;
+    if (uid) {
+      const p = await getUserProfile(uid);
       setProfile(p);
+      return p;
     }
+    return null;
   };
 
   return { user, profile, loading, refreshProfile };

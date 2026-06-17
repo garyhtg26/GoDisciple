@@ -72,6 +72,17 @@ service cloud.firestore {
           .hasOnly(['groupId', 'role', 'updatedAt']);
     }
 
+    // Approve into a group: a group leader/co-leader may attach a user to the
+    // group they lead by setting that user's groupId (and nothing else but
+    // updatedAt). Role must stay unchanged, so this can't be used to elevate.
+    function isValidGroupAdd() {
+      return request.resource.data.groupId != null
+        && isGroupLeader(request.resource.data.groupId)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['groupId', 'updatedAt']);
+    }
+
     match /users/{uid} {
       allow read: if isAuthed();
 
@@ -81,7 +92,8 @@ service cloud.firestore {
         || (isOwner(uid)
           && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role))
         || (isOwner(uid) && hasValidLeaderClaim())
-        || (isAuthed() && isValidKick());
+        || (isAuthed() && isValidKick())
+        || (isAuthed() && isValidGroupAdd());
     }
 
 

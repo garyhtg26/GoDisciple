@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import { registerWithEmail } from '../../src/services/authService';
+import { useAuthContext } from '../../src/context/AuthContext';
 import InputField from '../../src/components/InputField';
 import Colors from '../../src/constants/colors';
 import Typography from '../../src/constants/typography';
@@ -17,6 +18,7 @@ const BG_IMAGE = { uri: 'https://images.unsplash.com/photo-1478147427282-58a87a1
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { refreshProfile } = useAuthContext();
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', password: '', confirmPassword: '',
   });
@@ -51,6 +53,9 @@ export default function RegisterScreen() {
         phone: form.phone.trim(),
         password: form.password,
       });
+      // The auth listener may have fetched the profile before the Firestore
+      // doc was written — refetch now so the name is available immediately.
+      await refreshProfile();
       router.replace('/tabs/home');
     } catch (err) {
       Alert.alert('Registration Failed', err.message || 'Something went wrong. Please try again.');
